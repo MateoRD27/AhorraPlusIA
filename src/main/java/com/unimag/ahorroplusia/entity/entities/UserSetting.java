@@ -47,8 +47,8 @@ public class UserSetting {
     private BigDecimal spendingAlertThreshold;
 
     // Idioma
-    @Column(nullable = false, length = 10)
-    private String language = "es";
+    //@Column(nullable = false, length = 10)
+   // private String language = "es";
 
     // Moneda
     @Column(nullable = false, length = 10)

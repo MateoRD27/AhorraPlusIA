@@ -45,7 +45,7 @@ public class SavingsGoal {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Frequency frequency;
+    private Frequency frequency; // frecuencia de ahorro
 
     private BigDecimal suggestedQuota;
 

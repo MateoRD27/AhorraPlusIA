@@ -32,10 +32,6 @@ public class Login {
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
-    //dispositivo info
-    @Column(name = "device_info", length = 255)
-    private String deviceInfo;
-
     //intento exitoso
     @Column(name = "successful", nullable = false)
     private Boolean successful;
