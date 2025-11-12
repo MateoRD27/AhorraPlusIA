@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: ahorroplusia-db
+    restart: always
+    environment:
+      POSTGRES_DB: ahorroplusia        # nombre de la base de datos
+      POSTGRES_USER: postgres          # usuario
+      POSTGRES_PASSWORD: 123456        # contraseña
+    ports:
+      - "5432:5432"                    # expone el puerto local:contenedor
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    networks:
+      - ahorroplus-network
+
+networks:
+  ahorroplus-network:
+    driver: bridge
