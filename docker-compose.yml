@@ -11,8 +11,6 @@ services:
       POSTGRES_PASSWORD: 123456        # contraseña
     ports:
       - "5432:5432"                    # expone el puerto local:contenedor
-    volumes:
-      - ./postgres_data:/var/lib/postgresql/data
     networks:
       - ahorroplus-network
 
