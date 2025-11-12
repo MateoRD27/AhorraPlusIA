@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: AhorroPlusIA
+  server:
+    port: 8080
+    servlet:
+      context-path: /api/v1
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ahorroplusia
+    username: postgres
+    password: 123456
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    open-in-view: false
+
+  logging:
+    level:
+      root: INFO
+      org.hibernate.SQL: DEBUG
+      org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    file:
+      name: logs/app.log
+
+  profiles:
+    active: dev
