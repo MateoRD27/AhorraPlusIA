@@ -1,19 +1,15 @@
 package com.unimag.ahorroplusia.entity.entities;
 
-import com.unimag.ahorroplusia.entity.enums.AccountStatus;
 import com.unimag.ahorroplusia.entity.enums.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.boot.spi.AccessType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 
 @Data

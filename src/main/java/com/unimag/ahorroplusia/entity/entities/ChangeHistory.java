@@ -1,5 +1,4 @@
 package com.unimag.ahorroplusia.entity.entities;
-import com.unimag.ahorroplusia.entity.enums.AccountStatus;
 import com.unimag.ahorroplusia.entity.enums.ActionType;
 import com.unimag.ahorroplusia.entity.enums.EntityType;
 import jakarta.persistence.*;
@@ -7,11 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.boot.spi.AccessType;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Data
 @AllArgsConstructor
