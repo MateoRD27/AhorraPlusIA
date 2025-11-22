@@ -5,9 +5,17 @@ import com.unimag.ahorroplusia.entity.enums.Priority;
 import com.unimag.ahorroplusia.entity.enums.RequestType;
 import com.unimag.ahorroplusia.entity.enums.TicketStatus;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class SupportTicketDto {
     // Tipo de solicitud
     @Enumerated(EnumType.STRING)
