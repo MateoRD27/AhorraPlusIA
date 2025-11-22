@@ -5,7 +5,6 @@ import com.unimag.ahorroplusia.dto.LoginRequest;
 import com.unimag.ahorroplusia.dto.RegisterRequest;
 import org.springframework.stereotype.Service;
 
-@Service
 public interface AuthService {
     AuthResponse register(RegisterRequest request);
     AuthResponse login(LoginRequest request);

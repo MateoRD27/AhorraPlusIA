@@ -36,3 +36,6 @@ logging:
 jwt:
   secret: verySecretKeyChangeMeToEnvVar12345
   expirationMs: 86400000
+
+gemini:
+  api-key: AIzaSyDKXMcg3kPiT_4SKNY3EgxVyABb1AWqnAM

@@ -17,6 +17,7 @@ public class IncomeController {
 
     private final IncomeService incomeService;
 
+
     @PostMapping("/{userId}")
     public ResponseEntity<IncomeDTO> createIncome(@RequestBody IncomeDTO dto,
                                                   @PathVariable Long userId) {
