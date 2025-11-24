@@ -97,5 +97,19 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles = new HashSet<>();
+    @PrePersist
+    public void prePersist() {
+        if (this.registrationDate == null)
+            this.registrationDate = LocalDateTime.now();
+
+        if (this.creationDate == null)
+            this.creationDate = LocalDateTime.now();
+
+        if (this.accountStatus == null)
+            this.accountStatus = AccountStatus.ACTIVE;
+
+        if (this.verifiedAccount == null)
+            this.verifiedAccount = false;
+    }
 
 }

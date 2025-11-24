@@ -1,11 +1,13 @@
 package com.unimag.ahorroplusia.services;
 
 import com.unimag.ahorroplusia.dto.ExpenseDTO;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+@Service
 public interface ExpenseService {
 
     ExpenseDTO createExpense(ExpenseDTO dto, Long userId);

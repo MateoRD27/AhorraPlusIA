@@ -1,7 +1,4 @@
 spring:
-  application:
-    name: AhorroPlusIA
-
   datasource:
     url: jdbc:postgresql://localhost:5432/ahorroplusia
     username: postgres
@@ -17,25 +14,13 @@ spring:
     show-sql: true
     open-in-view: false
 
-  profiles:
-    active: dev
-
 server:
   port: 8080
-  servlet:
-    context-path: /api/v1
 
-logging:
-  level:
-    root: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-  file:
-    name: logs/app.log
 
 jwt:
-  secret: verySecretKeyChangeMeToEnvVar12345
+  secret: defaultSecretKey1222211112121223
   expirationMs: 86400000
 
 gemini:
-  api-key: AIzaSyDKXMcg3kPiT_4SKNY3EgxVyABb1AWqnAM
+  api-key: AIzaSyDed7UPQvPe0yZxentZOZqpxIGELfaHm5s

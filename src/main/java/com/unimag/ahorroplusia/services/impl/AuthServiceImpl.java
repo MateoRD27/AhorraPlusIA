@@ -10,6 +10,7 @@ import com.unimag.ahorroplusia.entity.enums.ERole;
 import com.unimag.ahorroplusia.repository.RoleRepository;
 import com.unimag.ahorroplusia.repository.UserRepository;
 import com.unimag.ahorroplusia.security.jwt.JwtUtil;
+import com.unimag.ahorroplusia.services.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class AuthServiceImpl {
+public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;

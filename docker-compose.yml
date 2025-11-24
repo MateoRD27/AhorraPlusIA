@@ -6,11 +6,33 @@ services:
     container_name: ahorroplusia-db
     restart: always
     environment:
-      POSTGRES_DB: ahorroplusia        # nombre de la base de datos
-      POSTGRES_USER: postgres          # usuario
-      POSTGRES_PASSWORD: 123456        # contraseña
+      POSTGRES_DB: ahorroplusia
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
     ports:
-      - "5432:5432"                    # expone el puerto local:contenedor
+      - "5432:5432"
+    networks:
+      - ahorroplus-network
+
+  ahorroplus-app:
+    build: .
+    container_name: ahorroplus-app
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ahorroplusia
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8080
+
+      # Variables seguras y necesarias
+      JWT_SECRET: verySecretKeyChangeMeToEnvVar12345ssaa
+      JWT_EXPIRATION: 86400000
+
+      GEMINI_API_KEY: "AIzaSyDKXMcg3kPiT_4SKNY3EgxVyABb1AWqnAM"
     networks:
       - ahorroplus-network
 
