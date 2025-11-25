@@ -9,5 +9,6 @@ import org.springframework.stereotype.Service;
 public interface AuthService {
     AuthResponse register(RegisterRequest request);
     AuthResponse login(LoginRequest request);
+    void verifyAccount(String token);
 
 }

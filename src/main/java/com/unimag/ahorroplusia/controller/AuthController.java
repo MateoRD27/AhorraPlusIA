@@ -26,5 +26,11 @@ public class AuthController {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
+    @GetMapping("/verify")
+    public ResponseEntity<String> verifyAccount(@RequestParam("token") String token) {
+        authService.verifyAccount(token);
+        return ResponseEntity.ok("Cuenta verificada correctamente.");
+    }
+
 
 }
