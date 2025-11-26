@@ -75,8 +75,19 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
     @Override
     @Transactional
     public void deleteSavingsGoal(Integer idGoal, Long userId) {
-        //  Buscamos la meta y verificamos permisos antes de borrar
         SavingsGoal goal = getGoalEntity(idGoal, userId);
+
+        // MEJORA: Si la meta tiene dinero, se lo devolvemos al usuario antes de borrarla
+        if (goal.getCurrentAmount().compareTo(BigDecimal.ZERO) > 0) {
+            User user = goal.getUser();
+            BigDecimal userBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+
+            // Devolvemos el dinero
+            BigDecimal newBalance = userBalance.add(goal.getCurrentAmount());
+            user.setCurrentAvailableMoney(newBalance.doubleValue());
+            userRepository.save(user);
+        }
+
         savingsGoalRepository.delete(goal);
     }
 
@@ -96,46 +107,63 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
         return savingGoalMapper.savingGoalToSavingGoalDTO(getGoalEntity(idGoal, userId));
     }
 
+    // --- LOGICA CORREGIDA DE INGRESAR DINERO ---
     @Override
     @Transactional
     public SavingGoalDTO addFunds(Integer idGoal, BigDecimal amount, Long userId) {
-        //  Validación básica: no se puede sumar 0 o negativo
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("El monto debe ser mayor a 0");
         }
 
-        //  Obtener la meta
         SavingsGoal goal = getGoalEntity(idGoal, userId);
+        User user = goal.getUser();
 
-        //  Sumar el dinero al monto actual
+        // 1. Obtener dinero disponible del usuario (Convirtiendo Double a BigDecimal)
+        BigDecimal userAvailable = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+
+        // 2. VALIDACIÓN: ¿Tiene saldo suficiente?
+        if (userAvailable.compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Saldo insuficiente. Tienes disponible: " + userAvailable);
+        }
+
+        // 3. Restar dinero al usuario
+        user.setCurrentAvailableMoney(userAvailable.subtract(amount).doubleValue());
+        userRepository.save(user);
+
+        // 4. Sumar dinero a la meta
         goal.setCurrentAmount(goal.getCurrentAmount().add(amount));
 
-        //  Verificar si ya llegamos a la meta para felicitar al usuario (cambiar estado)
+        // 5. Verificar si se cumplió la meta
         checkCompletion(goal);
 
         return savingGoalMapper.savingGoalToSavingGoalDTO(savingsGoalRepository.save(goal));
     }
 
+    // --- LOGICA CORREGIDA DE RETIRAR DINERO ---
     @Override
     @Transactional
     public SavingGoalDTO withdrawFunds(Integer idGoal, BigDecimal amount, Long userId) {
-        //  Validación básica
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("El monto a retirar debe ser mayor a 0");
         }
 
         SavingsGoal goal = getGoalEntity(idGoal, userId);
+        User user = goal.getUser();
 
-        //  Validación de fondos: No puedes retirar más de lo que tienes ahorrado
+        // 1. Validar que la meta tenga fondos suficientes
         if (goal.getCurrentAmount().compareTo(amount) < 0) {
             throw new IllegalArgumentException("Fondos insuficientes en la meta");
         }
 
-        //  Restar el dinero
+        // 2. Restar dinero a la meta
         goal.setCurrentAmount(goal.getCurrentAmount().subtract(amount));
 
-        //  Lógica de Estado: Si la meta estaba 'COMPLETADA' pero retiramos dinero
-        // y bajamos del objetivo, debe volver a estar 'ACTIVA'
+        // 3. Devolver dinero al usuario (Saldo disponible)
+        BigDecimal userAvailable = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+        user.setCurrentAvailableMoney(userAvailable.add(amount).doubleValue());
+        userRepository.save(user);
+
+        // 4. Si bajamos del objetivo, reactivamos la meta si estaba completada
         if (goal.getStatus() == GoalStatus.COMPLETED && goal.getCurrentAmount().compareTo(goal.getTargetAmount()) < 0) {
             goal.setStatus(GoalStatus.ACTIVE);
         }
