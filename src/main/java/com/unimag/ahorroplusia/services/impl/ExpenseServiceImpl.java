@@ -35,7 +35,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
         boolean overLimit = dto.getAmount().compareTo(currentBalance) > 0;
 
-        // RESTAR DEL SALDO
+        // RESTAR DEL SALDO DISPONIBLE
         user.setCurrentAvailableMoney(currentBalance.subtract(dto.getAmount()).doubleValue());
         userRepository.save(user);
 
@@ -53,13 +53,14 @@ public class ExpenseServiceImpl implements ExpenseService {
     @Transactional
     public ExpenseDTO updateExpense(Integer idExpense, ExpenseDTO dto, Long userId) {
         Expense expense = expenseRepository.findById(idExpense)
-                .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado con ID: " + idExpense));
 
-        if (!expense.getUser().getId().equals(userId)) throw new RuntimeException("No autorizado");
+        if (!expense.getUser().getId().equals(userId))
+            throw new RuntimeException("No autorizado para modificar este gasto");
 
         User user = expense.getUser();
 
-        // AJUSTAR SALDO: Devolver monto viejo (se cancela), Restar monto nuevo
+        // AJUSTAR SALDO: Devolver monto antiguo (se cancela el gasto viejo), Restar monto nuevo
         BigDecimal oldAmount = expense.getAmount();
         BigDecimal newAmount = dto.getAmount();
         BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
@@ -67,6 +68,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         user.setCurrentAvailableMoney(currentBalance.add(oldAmount).subtract(newAmount).doubleValue());
         userRepository.save(user);
 
+        // Actualizar datos
         expense.setAmount(newAmount);
         expense.setDate(dto.getDate());
         expense.setMethod(dto.getMethod());
@@ -82,11 +84,12 @@ public class ExpenseServiceImpl implements ExpenseService {
     @Transactional
     public void deleteExpense(Integer idExpense, Long userId) {
         Expense expense = expenseRepository.findById(idExpense)
-                .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado con ID: " + idExpense));
 
-        if (!expense.getUser().getId().equals(userId)) throw new RuntimeException("No autorizado");
+        if (!expense.getUser().getId().equals(userId))
+            throw new RuntimeException("No autorizado para eliminar este gasto");
 
-        // SUMAR AL SALDO (Se elimina el gasto, el dinero vuelve)
+        // SUMAR AL SALDO (Se elimina el gasto, el dinero regresa a la cuenta)
         User user = expense.getUser();
         BigDecimal refundAmount = expense.getAmount();
         BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());

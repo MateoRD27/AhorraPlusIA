@@ -36,7 +36,7 @@ public class IncomeServiceImpl implements IncomeService {
         income.setUser(user);
         income.setCreationDate(LocalDateTime.now());
 
-        // SUMAR AL SALDO
+        // SUMAR AL SALDO DISPONIBLE
         BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
         user.setCurrentAvailableMoney(currentBalance.add(incomeDTO.getAmount()).doubleValue());
         userRepository.save(user);
@@ -50,13 +50,14 @@ public class IncomeServiceImpl implements IncomeService {
     @Transactional
     public IncomeDTO updateIncome(Integer idIncome, IncomeDTO incomeDTO, Long userId) {
         Income income = incomeRepository.findById(idIncome)
-                .orElseThrow(() -> new ResourceNotFoundException("Ingreso no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingreso no encontrado con ID: " + idIncome));
 
-        if(!income.getUser().getId().equals(userId)) throw new RuntimeException("No autorizado");
+        if(!income.getUser().getId().equals(userId))
+            throw new RuntimeException("No autorizado para modificar este ingreso");
 
         User user = income.getUser();
 
-        // AJUSTAR SALDO: Restar valor viejo, sumar valor nuevo
+        // AJUSTAR SALDO: Restar valor antiguo, sumar valor nuevo
         BigDecimal oldAmount = income.getAmount();
         BigDecimal newAmount = incomeDTO.getAmount();
         BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
@@ -64,6 +65,7 @@ public class IncomeServiceImpl implements IncomeService {
         user.setCurrentAvailableMoney(currentBalance.subtract(oldAmount).add(newAmount).doubleValue());
         userRepository.save(user);
 
+        // Actualizar datos
         income.setAmount(newAmount);
         income.setDate(incomeDTO.getDate());
         income.setSource(incomeDTO.getSource());
@@ -77,11 +79,12 @@ public class IncomeServiceImpl implements IncomeService {
     @Transactional
     public void deleteIncome(Integer idIncome, Long userId) {
         Income income = incomeRepository.findById(idIncome)
-                .orElseThrow(() -> new ResourceNotFoundException("Ingreso no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingreso no encontrado con ID: " + idIncome));
 
-        if(!income.getUser().getId().equals(userId)) throw new RuntimeException("No autorizado");
+        if(!income.getUser().getId().equals(userId))
+            throw new RuntimeException("No autorizado para eliminar este ingreso");
 
-        // RESTAR DEL SALDO (Se elimina el ingreso, el dinero desaparece)
+        // RESTAR DEL SALDO (Se elimina el ingreso, el dinero desaparece de la cuenta)
         User user = income.getUser();
         BigDecimal amountToRemove = income.getAmount();
         BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());

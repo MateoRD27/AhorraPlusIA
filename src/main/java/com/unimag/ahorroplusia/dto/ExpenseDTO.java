@@ -1,8 +1,8 @@
 package com.unimag.ahorroplusia.dto;
 
-import com.unimag.ahorroplusia.entity.entities.User;
 import com.unimag.ahorroplusia.entity.enums.PaymentMethod;
-import jakarta.persistence.*;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,33 +17,19 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExpenseDTO {
-
+    // CORRECCIÓN: Agregar este campo
     private Integer idExpense;
-    // Monto del gasto
-    private BigDecimal amount;
 
-    // Fecha del gasto
+    private BigDecimal amount;
     private LocalDate date;
 
-    // Método de pago (efectivo, transferencia)
     @Enumerated(EnumType.STRING)
     private PaymentMethod method;
 
-    // Descripción del gasto
     private String description;
-
-    // Indica si es un gasto anómalo
     private Boolean anomalous = false;
-
-    // Indica si hay sobrecupo
     private Boolean overlimit = false;
-
-    // Fecha de creación del registro
     private LocalDateTime creationDate;
-
-    // Fecha de modificación
     private LocalDateTime modificationDate;
-
-
     private UserDto userDto;
 }
