@@ -37,7 +37,12 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         BigDecimal totalIncome = incomeRepository.getTotalIncome(userId);
         BigDecimal totalExpenses = expenseRepository.getTotalExpenses(userId);
+
+        if (totalIncome == null) totalIncome = BigDecimal.ZERO;
+        if (totalExpenses == null) totalExpenses = BigDecimal.ZERO;
+
         BigDecimal balance = totalIncome.subtract(totalExpenses);
+
 
         String prompt = """
         Eres un asesor financiero especializado en estudiantes universitarios.

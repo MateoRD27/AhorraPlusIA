@@ -25,6 +25,7 @@ public class Recommendation {
     @JoinColumn(name = "id_usuario", nullable = false)
     private User user;
 
+    @Column(columnDefinition = "TEXT")
     private String message;
 
     @Enumerated(EnumType.STRING)

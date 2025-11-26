@@ -1,0 +1,10 @@
+spring:
+  mail:
+    username: jeffflorez08@gmail.com
+    password: pwqepglqsqcuazhl
+
+jwt:
+  secret: defaultSecretKey1222211112121223
+
+gemini:
+  api-key: AIzaSyBWR6-RuKv1RO6Qv11oybKvrChzj3IlpI0

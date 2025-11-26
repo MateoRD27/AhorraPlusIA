@@ -2,6 +2,9 @@ package com.unimag.ahorroplusia.entity.enums;
 
 public enum PaymentMethod {
     //efectivo transferencia
-    CASH,
-    TRANSFER
+    EFECTIVO,
+    TRANSFERENCIA,
+    TARJETA_DEBITO,
+    TARJETA_CREDITO
+
 }

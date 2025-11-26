@@ -32,5 +32,11 @@ public class AuthController {
         return ResponseEntity.ok("Cuenta verificada correctamente.");
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        return ResponseEntity.ok(authService.getCurrentUser());
+    }
+
+
 
 }

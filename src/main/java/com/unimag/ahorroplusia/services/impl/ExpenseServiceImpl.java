@@ -9,6 +9,7 @@ import com.unimag.ahorroplusia.repository.ExpenseRepository;
 import com.unimag.ahorroplusia.repository.IncomeRepository;
 import com.unimag.ahorroplusia.repository.UserRepository;
 import com.unimag.ahorroplusia.services.ExpenseService;
+import com.unimag.ahorroplusia.services.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +25,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final IncomeRepository incomeRepository;
     private final UserRepository userRepository;
     private final ExpenseMapper expenseMapper;
+    private final RecommendationService recommendationService;
 
     @Override
     public ExpenseDTO createExpense(ExpenseDTO dto, Long userId) {
@@ -42,7 +44,17 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setCreationDate(LocalDateTime.now());
         expense.setOverlimit(overLimit);
 
-        return expenseMapper.expenseToExpenseDTO(expenseRepository.save(expense));
+        ExpenseDTO savedExpense = expenseMapper.expenseToExpenseDTO(expenseRepository.save(expense));
+
+        // GENERAR RECOMENDACIÓN AUTOMÁTICAMENTE
+        try {
+            recommendationService.generateAndSaveRecommendation(userId);
+        } catch (Exception e) {
+            // Log el error pero no fallar la creación del gasto
+            System.err.println("Error generando recomendación: " + e.getMessage());
+        }
+
+        return savedExpense;
     }
 
     @Override
@@ -59,7 +71,16 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setDescription(dto.getDescription());
         expense.setModificationDate(LocalDateTime.now());
 
-        return expenseMapper.expenseToExpenseDTO(expenseRepository.save(expense));
+        ExpenseDTO updatedExpense = expenseMapper.expenseToExpenseDTO(expenseRepository.save(expense));
+
+        // GENERAR RECOMENDACIÓN TRAS ACTUALIZACIÓN
+        try {
+            recommendationService.generateAndSaveRecommendation(userId);
+        } catch (Exception e) {
+            System.err.println("Error generando recomendación: " + e.getMessage());
+        }
+
+        return updatedExpense;
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.unimag.ahorroplusia.mapper.IncomeMapper;
 import com.unimag.ahorroplusia.repository.IncomeRepository;
 import com.unimag.ahorroplusia.repository.UserRepository;
 import com.unimag.ahorroplusia.services.IncomeService;
+import com.unimag.ahorroplusia.services.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class IncomeServiceImpl implements IncomeService {
     private final IncomeRepository incomeRepository;
     private final UserRepository userRepository;
     private final IncomeMapper incomeMapper;
+    private final RecommendationService recommendationService; // NUEVO
 
     @Override
     public IncomeDTO createIncome(IncomeDTO incomeDTO, Long userId) {
@@ -33,7 +35,16 @@ public class IncomeServiceImpl implements IncomeService {
         income.setUser(user);
         income.setCreationDate(LocalDateTime.now());
 
-        return incomeMapper.incomeToIncomeDTO(incomeRepository.save(income));
+        IncomeDTO savedIncome = incomeMapper.incomeToIncomeDTO(incomeRepository.save(income));
+
+        // GENERAR RECOMENDACIÓN AUTOMÁTICAMENTE
+        try {
+            recommendationService.generateAndSaveRecommendation(userId);
+        } catch (Exception e) {
+            System.err.println("Error generando recomendación: " + e.getMessage());
+        }
+
+        return savedIncome;
     }
 
     @Override
@@ -51,7 +62,16 @@ public class IncomeServiceImpl implements IncomeService {
         income.setDescription(incomeDTO.getDescription());
         income.setModificationDate(LocalDateTime.now());
 
-        return incomeMapper.incomeToIncomeDTO(incomeRepository.save(income));
+        IncomeDTO updatedIncome = incomeMapper.incomeToIncomeDTO(incomeRepository.save(income));
+
+        // GENERAR RECOMENDACIÓN TRAS ACTUALIZACIÓN
+        try {
+            recommendationService.generateAndSaveRecommendation(userId);
+        } catch (Exception e) {
+            System.err.println("Error generando recomendación: " + e.getMessage());
+        }
+
+        return updatedIncome;
     }
 
     @Override

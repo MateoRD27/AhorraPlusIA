@@ -8,10 +8,7 @@ import com.unimag.ahorroplusia.dto.UserResponse;
 import com.unimag.ahorroplusia.entity.entities.Role;
 import com.unimag.ahorroplusia.entity.entities.User;
 import com.unimag.ahorroplusia.entity.enums.ERole;
-import com.unimag.ahorroplusia.exception.EmailAlreadyRegisteredException;
-import com.unimag.ahorroplusia.exception.EmailNotVerifiedException;
-import com.unimag.ahorroplusia.exception.InvalidCredentialsException;
-import com.unimag.ahorroplusia.exception.RoleNotFoundException;
+import com.unimag.ahorroplusia.exception.*;
 import com.unimag.ahorroplusia.repository.RoleRepository;
 import com.unimag.ahorroplusia.repository.UserRepository;
 import com.unimag.ahorroplusia.security.jwt.JwtUtil;
@@ -20,6 +17,9 @@ import com.unimag.ahorroplusia.services.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -114,6 +114,22 @@ public class AuthServiceImpl implements AuthService {
         user.setVerificationTokenExpiration(null);
 
         userRepository.save(user);
+    }
+
+    public UserResponse getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        return UserResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .fixedSalary(user.getFixedSalary())
+                .currentAvailableMoney(user.getCurrentAvailableMoney())
+                .build();
     }
 
 

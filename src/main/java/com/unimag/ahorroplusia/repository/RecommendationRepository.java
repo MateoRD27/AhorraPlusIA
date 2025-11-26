@@ -10,5 +10,6 @@ public interface RecommendationRepository extends JpaRepository<Recommendation, 
 
     List<Recommendation> findByUserId(Long userId);
 
-    List<Recommendation> findByStatus(EstadoRecomendacion status);
+    List<Recommendation> findByUserIdOrderByCreationDateDesc(Long userId);
+
 }
