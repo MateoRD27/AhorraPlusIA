@@ -20,6 +20,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class IncomeDTO {
 
+    private Integer idIncome;
+
     // Monto del ingreso
     private BigDecimal amount;
 

@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ExpenseDTO {
 
+    private Integer idExpense;
     // Monto del gasto
     private BigDecimal amount;
 

@@ -11,6 +11,7 @@ import com.unimag.ahorroplusia.services.IncomeService;
 import com.unimag.ahorroplusia.services.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,11 +24,11 @@ public class IncomeServiceImpl implements IncomeService {
     private final IncomeRepository incomeRepository;
     private final UserRepository userRepository;
     private final IncomeMapper incomeMapper;
-    private final RecommendationService recommendationService; // NUEVO
+    private final RecommendationService recommendationService;
 
     @Override
+    @Transactional
     public IncomeDTO createIncome(IncomeDTO incomeDTO, Long userId) {
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
@@ -35,69 +36,77 @@ public class IncomeServiceImpl implements IncomeService {
         income.setUser(user);
         income.setCreationDate(LocalDateTime.now());
 
+        // SUMAR AL SALDO
+        BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+        user.setCurrentAvailableMoney(currentBalance.add(incomeDTO.getAmount()).doubleValue());
+        userRepository.save(user);
+
         IncomeDTO savedIncome = incomeMapper.incomeToIncomeDTO(incomeRepository.save(income));
-
-        // GENERAR RECOMENDACIÓN AUTOMÁTICAMENTE
-        try {
-            recommendationService.generateAndSaveRecommendation(userId);
-        } catch (Exception e) {
-            System.err.println("Error generando recomendación: " + e.getMessage());
-        }
-
+        try { recommendationService.generateAndSaveRecommendation(userId); } catch (Exception e) {}
         return savedIncome;
     }
 
     @Override
+    @Transactional
     public IncomeDTO updateIncome(Integer idIncome, IncomeDTO incomeDTO, Long userId) {
-
         Income income = incomeRepository.findById(idIncome)
                 .orElseThrow(() -> new ResourceNotFoundException("Ingreso no encontrado"));
 
-        if(!income.getUser().getId().equals(userId))
-            throw new RuntimeException("No autorizado");
+        if(!income.getUser().getId().equals(userId)) throw new RuntimeException("No autorizado");
 
-        income.setAmount(incomeDTO.getAmount());
+        User user = income.getUser();
+
+        // AJUSTAR SALDO: Restar valor viejo, sumar valor nuevo
+        BigDecimal oldAmount = income.getAmount();
+        BigDecimal newAmount = incomeDTO.getAmount();
+        BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+
+        user.setCurrentAvailableMoney(currentBalance.subtract(oldAmount).add(newAmount).doubleValue());
+        userRepository.save(user);
+
+        income.setAmount(newAmount);
         income.setDate(incomeDTO.getDate());
         income.setSource(incomeDTO.getSource());
         income.setDescription(incomeDTO.getDescription());
         income.setModificationDate(LocalDateTime.now());
 
-        IncomeDTO updatedIncome = incomeMapper.incomeToIncomeDTO(incomeRepository.save(income));
-
-        // GENERAR RECOMENDACIÓN TRAS ACTUALIZACIÓN
-        try {
-            recommendationService.generateAndSaveRecommendation(userId);
-        } catch (Exception e) {
-            System.err.println("Error generando recomendación: " + e.getMessage());
-        }
-
-        return updatedIncome;
+        return incomeMapper.incomeToIncomeDTO(incomeRepository.save(income));
     }
 
     @Override
+    @Transactional
     public void deleteIncome(Integer idIncome, Long userId) {
-
         Income income = incomeRepository.findById(idIncome)
                 .orElseThrow(() -> new ResourceNotFoundException("Ingreso no encontrado"));
 
-        if(!income.getUser().getId().equals(userId))
-            throw new RuntimeException("No autorizado");
+        if(!income.getUser().getId().equals(userId)) throw new RuntimeException("No autorizado");
+
+        // RESTAR DEL SALDO (Se elimina el ingreso, el dinero desaparece)
+        User user = income.getUser();
+        BigDecimal amountToRemove = income.getAmount();
+        BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+
+        user.setCurrentAvailableMoney(currentBalance.subtract(amountToRemove).doubleValue());
+        userRepository.save(user);
 
         incomeRepository.delete(income);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<IncomeDTO> getAllIncomesByUser(Long userId) {
         return incomeRepository.findByUserId(userId)
                 .stream().map(incomeMapper::incomeToIncomeDTO).toList();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BigDecimal getTotalIncome(Long userId) {
         return incomeRepository.getTotalIncome(userId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BigDecimal getIncomeBetweenDates(Long userId, java.time.LocalDate start, java.time.LocalDate end) {
         return incomeRepository.getIncomeBetweenDates(userId, start, end);
     }
