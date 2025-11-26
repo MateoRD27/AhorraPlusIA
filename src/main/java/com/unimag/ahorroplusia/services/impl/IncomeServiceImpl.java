@@ -42,7 +42,14 @@ public class IncomeServiceImpl implements IncomeService {
         userRepository.save(user);
 
         IncomeDTO savedIncome = incomeMapper.incomeToIncomeDTO(incomeRepository.save(income));
-        try { recommendationService.generateAndSaveRecommendation(userId); } catch (Exception e) {}
+
+        try {
+            String detail = String.format("Monto: $%s, Fuente: %s", incomeDTO.getAmount(), incomeDTO.getSource());
+            recommendationService.generateSpecificRecommendation(userId, "INCOME", detail);
+        } catch (Exception e) {
+            System.err.println("No se pudo generar recomendación de ingreso: " + e.getMessage());
+        }
+
         return savedIncome;
     }
 

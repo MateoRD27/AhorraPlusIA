@@ -45,7 +45,12 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setOverlimit(overLimit);
 
         ExpenseDTO savedExpense = expenseMapper.expenseToExpenseDTO(expenseRepository.save(expense));
-        try { recommendationService.generateAndSaveRecommendation(userId); } catch (Exception e) {}
+        try {
+            String detail = String.format("Monto: $%s en %s (%s)", dto.getAmount(), dto.getMethod(), dto.getDescription());
+            recommendationService.generateSpecificRecommendation(userId, "EXPENSE", detail);
+        } catch (Exception e) {
+            System.err.println("No se pudo generar recomendación de gasto: " + e.getMessage());
+        }
         return savedExpense;
     }
 

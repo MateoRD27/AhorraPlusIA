@@ -15,6 +15,7 @@ import com.unimag.ahorroplusia.repository.ExpenseRepository;
 import com.unimag.ahorroplusia.repository.IncomeRepository;
 import com.unimag.ahorroplusia.repository.SavingsGoalRepository;
 import com.unimag.ahorroplusia.repository.UserRepository;
+import com.unimag.ahorroplusia.services.RecommendationService;
 import com.unimag.ahorroplusia.services.SavingsGoalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,13 +36,16 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
     private final IncomeRepository incomeRepository;
     private final ExpenseRepository expenseRepository;
     private final SavingGoalMapper savingGoalMapper;
+    private final RecommendationService recommendationService;
 
     @Override
     @Transactional
     public SavingGoalDTO createSavingsGoal(SavingGoalDTO dto, Long userId) {
+        //  Buscar al usuario
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
+        //  Mapear y configurar la meta
         SavingsGoal goal = savingGoalMapper.savingGoalDTOToSavingGoal(dto);
         goal.setUser(user);
         goal.setCreationDate(LocalDateTime.now());
@@ -49,11 +53,26 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
         goal.setCurrentAmount(BigDecimal.ZERO);
         goal.setStatus(GoalStatus.ACTIVE);
 
+        // Configurar frecuencia por defecto si es nula
         if (goal.getFrequency() == null) {
             goal.setFrequency(Frequency.MONTHLY);
         }
+        //  Guardar la meta en la base de datos primero
+        SavingsGoal savedGoal = savingsGoalRepository.save(goal);
+        //  Generar recomendación automática (Nueva funcionalidad)
+        // Se envuelve en try-catch para que si la IA falla, la meta se cree de todos modos.
+        try {
+            String detail = String.format("Meta: %s, Objetivo: $%s, Fecha límite: %s",
+                    savedGoal.getName(), savedGoal.getTargetAmount(), savedGoal.getEndDate());
 
-        return savingGoalMapper.savingGoalToSavingGoalDTO(savingsGoalRepository.save(goal));
+            // Llamamos al nuevo método específico con tipo "GOAL"
+            recommendationService.generateSpecificRecommendation(userId, "GOAL", detail);
+        } catch (Exception e) {
+            // Solo logueamos el error, no interrumpimos la creación de la meta
+            System.err.println("Advertencia: No se pudo generar la recomendación para la nueva meta: " + e.getMessage());
+        }
+        //  Retornar el DTO
+        return savingGoalMapper.savingGoalToSavingGoalDTO(savedGoal);
     }
 
     @Override
