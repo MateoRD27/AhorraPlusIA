@@ -1,12 +1,18 @@
 package com.unimag.ahorroplusia.services.impl;
 
 import com.unimag.ahorroplusia.dto.SavingGoalDTO;
+import com.unimag.ahorroplusia.entity.entities.Expense;
+import com.unimag.ahorroplusia.entity.entities.Income;
 import com.unimag.ahorroplusia.entity.entities.SavingsGoal;
 import com.unimag.ahorroplusia.entity.entities.User;
 import com.unimag.ahorroplusia.entity.enums.Frequency;
 import com.unimag.ahorroplusia.entity.enums.GoalStatus;
+import com.unimag.ahorroplusia.entity.enums.PaymentMethod;
+import com.unimag.ahorroplusia.entity.enums.Priority;
 import com.unimag.ahorroplusia.exception.ResourceNotFoundException;
 import com.unimag.ahorroplusia.mapper.SavingGoalMapper;
+import com.unimag.ahorroplusia.repository.ExpenseRepository;
+import com.unimag.ahorroplusia.repository.IncomeRepository;
 import com.unimag.ahorroplusia.repository.SavingsGoalRepository;
 import com.unimag.ahorroplusia.repository.UserRepository;
 import com.unimag.ahorroplusia.services.SavingsGoalService;
@@ -15,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,6 +32,8 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
 
     private final SavingsGoalRepository savingsGoalRepository;
     private final UserRepository userRepository;
+    private final IncomeRepository incomeRepository;
+    private final ExpenseRepository expenseRepository;
     private final SavingGoalMapper savingGoalMapper;
 
     @Override
@@ -40,26 +49,11 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
         goal.setCurrentAmount(BigDecimal.ZERO);
         goal.setStatus(GoalStatus.ACTIVE);
 
-        // Valor por defecto si no viene en el DTO
         if (goal.getFrequency() == null) {
             goal.setFrequency(Frequency.MONTHLY);
         }
 
         return savingGoalMapper.savingGoalToSavingGoalDTO(savingsGoalRepository.save(goal));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<SavingGoalDTO> getAllGoalsByUser(Long userId) {
-        return savingsGoalRepository.findByUserId(userId).stream()
-                .map(savingGoalMapper::savingGoalToSavingGoalDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public SavingGoalDTO getGoalById(Integer idGoal, Long userId) {
-        return savingGoalMapper.savingGoalToSavingGoalDTO(getGoalEntity(idGoal, userId));
     }
 
     @Override
@@ -83,17 +77,45 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
     public void deleteSavingsGoal(Integer idGoal, Long userId) {
         SavingsGoal goal = getGoalEntity(idGoal, userId);
 
-        // IMPORTANTE: Antes de borrar, devolvemos el dinero al usuario si la meta tenía fondos
-        if (goal.getCurrentAmount().compareTo(BigDecimal.ZERO) > 0) {
+        // LOGICA DE ELIMINACIÓN:
+        // Si la meta NO está completada y tiene dinero, devolvemos el dinero (Ingreso).
+        // Si la meta ESTÁ completada, se asume que el dinero se usó para el objetivo (Gasto consolidado).
+        if (goal.getStatus() != GoalStatus.COMPLETED && goal.getCurrentAmount().compareTo(BigDecimal.ZERO) > 0) {
             User user = goal.getUser();
-            BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
-            BigDecimal newBalance = currentBalance.add(goal.getCurrentAmount());
+            BigDecimal refundAmount = goal.getCurrentAmount();
 
-            user.setCurrentAvailableMoney(newBalance.doubleValue());
+            // 1. Registrar Ingreso (Devolución)
+            Income refund = Income.builder()
+                    .amount(refundAmount)
+                    .date(LocalDate.now())
+                    .source("Reembolso Meta: " + goal.getName())
+                    .description("Reembolso por eliminación de meta no completada")
+                    .creationDate(LocalDateTime.now())
+                    .user(user)
+                    .build();
+            incomeRepository.save(refund);
+
+            // 2. Devolver saldo al usuario
+            BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+            user.setCurrentAvailableMoney(currentBalance.add(refundAmount).doubleValue());
             userRepository.save(user);
         }
 
         savingsGoalRepository.delete(goal);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SavingGoalDTO> getAllGoalsByUser(Long userId) {
+        return savingsGoalRepository.findByUserId(userId).stream()
+                .map(savingGoalMapper::savingGoalToSavingGoalDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SavingGoalDTO getGoalById(Integer idGoal, Long userId) {
+        return savingGoalMapper.savingGoalToSavingGoalDTO(getGoalEntity(idGoal, userId));
     }
 
     @Override
@@ -106,18 +128,30 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
         SavingsGoal goal = getGoalEntity(idGoal, userId);
         User user = goal.getUser();
 
-        // 1. Verificar si el usuario tiene saldo suficiente
+        // 1. Validar saldo disponible
         BigDecimal userBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
-
         if (userBalance.compareTo(amount) < 0) {
-            throw new IllegalArgumentException("Saldo insuficiente en tu cuenta disponible. Tienes: " + userBalance);
+            throw new IllegalArgumentException("Saldo insuficiente. Disponible: $" + userBalance);
         }
 
-        // 2. Restar del bolsillo del usuario
+        // 2. Registrar GASTO (El ahorro sale del bolsillo)
+        Expense savingsExpense = Expense.builder()
+                .amount(amount)
+                .date(LocalDate.now())
+                .method(PaymentMethod.TRANSFERENCIA)
+                .description("Ahorro para meta: " + goal.getName())
+                .anomalous(false)
+                .overlimit(false)
+                .creationDate(LocalDateTime.now())
+                .user(user)
+                .build();
+        expenseRepository.save(savingsExpense);
+
+        // 3. Restar del saldo del usuario
         user.setCurrentAvailableMoney(userBalance.subtract(amount).doubleValue());
         userRepository.save(user);
 
-        // 3. Sumar a la meta
+        // 4. Sumar a la meta
         goal.setCurrentAmount(goal.getCurrentAmount().add(amount));
 
         checkCompletion(goal);
@@ -129,26 +163,43 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
     @Transactional
     public SavingGoalDTO withdrawFunds(Integer idGoal, BigDecimal amount, Long userId) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El monto debe ser mayor a 0");
+            throw new IllegalArgumentException("El monto a retirar debe ser mayor a 0");
         }
 
         SavingsGoal goal = getGoalEntity(idGoal, userId);
 
-        // 1. Verificar si la meta tiene fondos suficientes
-        if (goal.getCurrentAmount().compareTo(amount) < 0) {
-            throw new IllegalArgumentException("La meta no tiene fondos suficientes para este retiro.");
+        // REGLA DE PRIORIDAD ALTA: Solo retirar si está completada
+        if (goal.getPriority() == Priority.HIGH && goal.getStatus() != GoalStatus.COMPLETED) {
+            throw new IllegalArgumentException("Las metas de prioridad ALTA no permiten retiros parciales hasta ser completadas.");
         }
 
-        // 2. Restar de la meta
-        goal.setCurrentAmount(goal.getCurrentAmount().subtract(amount));
+        // Validar fondos
+        if (goal.getCurrentAmount().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Fondos insuficientes en la meta.");
+        }
 
-        // 3. Devolver dinero al bolsillo del usuario
         User user = goal.getUser();
+
+        // 1. Registrar INGRESO (El dinero vuelve al bolsillo)
+        Income withdrawalIncome = Income.builder()
+                .amount(amount)
+                .date(LocalDate.now())
+                .source("Retiro de Meta")
+                .description("Retiro de fondos de meta: " + goal.getName())
+                .creationDate(LocalDateTime.now())
+                .user(user)
+                .build();
+        incomeRepository.save(withdrawalIncome);
+
+        // 2. Sumar al saldo del usuario
         BigDecimal userBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
         user.setCurrentAvailableMoney(userBalance.add(amount).doubleValue());
         userRepository.save(user);
 
-        // Si se retiró dinero y la meta estaba completa, volver a ponerla activa
+        // 3. Restar de la meta
+        goal.setCurrentAmount(goal.getCurrentAmount().subtract(amount));
+
+        // Si baja del objetivo, volver a estado activo
         if (goal.getStatus() == GoalStatus.COMPLETED && goal.getCurrentAmount().compareTo(goal.getTargetAmount()) < 0) {
             goal.setStatus(GoalStatus.ACTIVE);
         }
@@ -156,14 +207,13 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
         return savingGoalMapper.savingGoalToSavingGoalDTO(savingsGoalRepository.save(goal));
     }
 
-    // --- Métodos Auxiliares ---
-
+    // Métodos auxiliares
     private SavingsGoal getGoalEntity(Integer idGoal, Long userId) {
         SavingsGoal goal = savingsGoalRepository.findById(idGoal)
-                .orElseThrow(() -> new ResourceNotFoundException("Meta de ahorro no encontrada con ID: " + idGoal));
+                .orElseThrow(() -> new ResourceNotFoundException("Meta no encontrada"));
 
         if (!goal.getUser().getId().equals(userId)) {
-            throw new RuntimeException("No tiene permisos para acceder a esta meta.");
+            throw new RuntimeException("No autorizado");
         }
         return goal;
     }
@@ -171,11 +221,6 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
     private void checkCompletion(SavingsGoal goal) {
         if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
             goal.setStatus(GoalStatus.COMPLETED);
-        } else {
-            // Si por alguna razón editamos el objetivo y ahora es mayor, volvemos a activa
-            if (goal.getStatus() == GoalStatus.COMPLETED) {
-                goal.setStatus(GoalStatus.ACTIVE);
-            }
         }
     }
 }
