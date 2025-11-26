@@ -19,6 +19,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SavingGoalDTO {
+
+    private Integer idGoal;
+
     private String name;
 
     private BigDecimal targetAmount; // cantidad objetivo
