@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 @Entity
-@Table(name = "notofications")
+@Table(name = "notifications")
 // notificaciones de la aplicacion
 public class Notification {
 
