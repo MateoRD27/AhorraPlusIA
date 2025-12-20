@@ -63,14 +63,18 @@ public class IncomeServiceImpl implements IncomeService {
             throw new RuntimeException("No autorizado para modificar este ingreso");
 
         User user = income.getUser();
-
-        // AJUSTAR SALDO: Restar valor antiguo, sumar valor nuevo
-        BigDecimal oldAmount = income.getAmount();
         BigDecimal newAmount = incomeDTO.getAmount();
-        BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
 
-        user.setCurrentAvailableMoney(currentBalance.subtract(oldAmount).add(newAmount).doubleValue());
-        userRepository.save(user);
+        // AJUSTAR SALDO si el ingreso tiene mas de 30 minutos de creacion: Restar valor antiguo, sumar valor nuevo
+        LocalDateTime thirtyMinutesAgo = LocalDateTime.now().minusMinutes(30);
+
+        if (income.getCreationDate().isAfter(thirtyMinutesAgo)) {
+            BigDecimal oldAmount = income.getAmount();
+            BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+
+            user.setCurrentAvailableMoney(currentBalance.subtract(oldAmount).add(newAmount).doubleValue());
+            userRepository.save(user);
+        }
 
         // Actualizar datos
         income.setAmount(newAmount);
@@ -91,13 +95,19 @@ public class IncomeServiceImpl implements IncomeService {
         if(!income.getUser().getId().equals(userId))
             throw new RuntimeException("No autorizado para eliminar este ingreso");
 
-        // RESTAR DEL SALDO (Se elimina el ingreso, el dinero desaparece de la cuenta)
-        User user = income.getUser();
-        BigDecimal amountToRemove = income.getAmount();
-        BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+        // RESTAR DEL SALDO si el ingreso tiene mas de 5 minutos desde su creación
+        LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
+        if (income.getCreationDate().isAfter(fiveMinutesAgo)) {
+            User user = income.getUser();
+            BigDecimal amountToRemove = income.getAmount();
+            BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
 
-        user.setCurrentAvailableMoney(currentBalance.subtract(amountToRemove).doubleValue());
-        userRepository.save(user);
+            user.setCurrentAvailableMoney(currentBalance.subtract(amountToRemove).doubleValue());
+            userRepository.save(user);
+
+            incomeRepository.delete(income);
+            return;
+        }
 
         incomeRepository.delete(income);
     }

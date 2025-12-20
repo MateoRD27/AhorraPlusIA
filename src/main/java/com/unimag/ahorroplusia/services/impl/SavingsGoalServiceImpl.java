@@ -139,6 +139,7 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
 
     @Override
     @Transactional
+    // agregar fondos a la meta
     public SavingGoalDTO addFunds(Integer idGoal, BigDecimal amount, Long userId) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("El monto debe ser mayor a 0");
@@ -147,13 +148,13 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
         SavingsGoal goal = getGoalEntity(idGoal, userId);
         User user = goal.getUser();
 
-        // 1. Validar saldo disponible
+        // Validar saldo disponible
         BigDecimal userBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
         if (userBalance.compareTo(amount) < 0) {
             throw new IllegalArgumentException("Saldo insuficiente. Disponible: $" + userBalance);
         }
 
-        // 2. Registrar GASTO (El ahorro sale del bolsillo)
+        /*  Registrar GASTO (El ahorro sale del bolsillo)
         Expense savingsExpense = Expense.builder()
                 .amount(amount)
                 .date(LocalDate.now())
@@ -165,12 +166,14 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
                 .user(user)
                 .build();
         expenseRepository.save(savingsExpense);
+        */
 
-        // 3. Restar del saldo del usuario
+
+        // Restar del saldo del usuario
         user.setCurrentAvailableMoney(userBalance.subtract(amount).doubleValue());
         userRepository.save(user);
 
-        // 4. Sumar a la meta
+        // Sumar a la meta
         goal.setCurrentAmount(goal.getCurrentAmount().add(amount));
 
         checkCompletion(goal);
@@ -180,6 +183,7 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
 
     @Override
     @Transactional
+    // retirar fondos de la meta
     public SavingGoalDTO withdrawFunds(Integer idGoal, BigDecimal amount, Long userId) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("El monto a retirar debe ser mayor a 0");
@@ -199,7 +203,7 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
 
         User user = goal.getUser();
 
-        // 1. Registrar INGRESO (El dinero vuelve al bolsillo)
+        /* Registrar INGRESO (El dinero vuelve al bolsillo)
         Income withdrawalIncome = Income.builder()
                 .amount(amount)
                 .date(LocalDate.now())
@@ -209,13 +213,14 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
                 .user(user)
                 .build();
         incomeRepository.save(withdrawalIncome);
+        */
 
-        // 2. Sumar al saldo del usuario
+        //  Sumar al saldo del usuario
         BigDecimal userBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
         user.setCurrentAvailableMoney(userBalance.add(amount).doubleValue());
         userRepository.save(user);
 
-        // 3. Restar de la meta
+        //  Restar de la meta
         goal.setCurrentAmount(goal.getCurrentAmount().subtract(amount));
 
         // Si baja del objetivo, volver a estado activo

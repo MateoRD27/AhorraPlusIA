@@ -34,9 +34,11 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    // salario fijo mensual del usuario
     @Column(name = "fixed_salary")
     private Double fixedSalary;
 
+    // dinero disponible actual del usuario
     @Column(name = "current_available_money")
     private Double currentAvailableMoney;
 

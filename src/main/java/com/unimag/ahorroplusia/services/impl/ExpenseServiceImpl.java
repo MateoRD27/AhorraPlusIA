@@ -65,14 +65,17 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         User user = expense.getUser();
 
-        // AJUSTAR SALDO: Devolver monto antiguo (se cancela el gasto viejo), Restar monto nuevo
-        BigDecimal oldAmount = expense.getAmount();
         BigDecimal newAmount = dto.getAmount();
-        BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+        // AJUSTAR SALDO: Devolver monto antiguo (se cancela el gasto viejo), Restar monto nuevo si tiene menos de un dia de creacion
+        LocalDateTime now = LocalDateTime.now().minusDays(1);
+        if(expense.getCreationDate().isAfter( now)) {
+            // El gasto fue creado hace menos de un dia, se ajusta el saldo
+            BigDecimal oldAmount = expense.getAmount();
+            BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
 
-        user.setCurrentAvailableMoney(currentBalance.add(oldAmount).subtract(newAmount).doubleValue());
-        userRepository.save(user);
-
+            user.setCurrentAvailableMoney(currentBalance.add(oldAmount).subtract(newAmount).doubleValue());
+            userRepository.save(user);
+        }
         // Actualizar datos
         expense.setAmount(newAmount);
         expense.setDate(dto.getDate());
@@ -96,11 +99,16 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         // SUMAR AL SALDO (Se elimina el gasto, el dinero regresa a la cuenta)
         User user = expense.getUser();
-        BigDecimal refundAmount = expense.getAmount();
-        BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
 
-        user.setCurrentAvailableMoney(currentBalance.add(refundAmount).doubleValue());
-        userRepository.save(user);
+        LocalDateTime now = LocalDateTime.now().minusDays(1);
+        if(expense.getCreationDate().isAfter(now)) {
+            // El gasto fue creado hace menos de un dia, se ajusta el saldo
+            BigDecimal refundAmount = expense.getAmount();
+            BigDecimal currentBalance = BigDecimal.valueOf(user.getCurrentAvailableMoney() == null ? 0.0 : user.getCurrentAvailableMoney());
+
+            user.setCurrentAvailableMoney(currentBalance.add(refundAmount).doubleValue());
+            userRepository.save(user);
+        }
 
         expenseRepository.delete(expense);
     }
